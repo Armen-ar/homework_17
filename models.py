@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from marshmallow import Schema, fields
 from data.initial_data import data
 
+
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data/data.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False

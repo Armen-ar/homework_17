@@ -11,6 +11,7 @@ app.config['JSON_AS_ASCII'] = False
 app.config['RESTX_JSON'] = {'ensure_ascii': False, 'indent': 3}
 db = SQLAlchemy(app)
 
+
 api = Api(app)
 movie_ns = api.namespace('movies')
 director_ns = api.namespace('directors')
