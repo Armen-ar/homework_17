@@ -28,9 +28,6 @@ genres_schema = GenreSchema(many=True)
 
 @movie_ns.route('/')
 class MoviesView(Resource):
-    """
-    Вывод все
-    """
     def get(self):
         all_movies = db.session.query(Movie).all()
 
@@ -108,23 +105,10 @@ class MoviesView(Resource):
 
 @director_ns.route('/')
 class DirectorsView(Resource):
-    """
-    Вывод все
-    """
     def get(self):
         all_directors = db.session.query(Director).all()
 
         return directors_schema.dump(all_directors), 200
-
-    def post(self):
-        req_json = request.json
-        new_director = Director(**req_json)
-
-        with db.session.begin():
-            db.session.add(new_director)
-            db.session.commit()
-
-            return "", 201
 
 
 @director_ns.route('/<int:bid>')
@@ -136,57 +120,13 @@ class DirectorsView(Resource):
         except Exception as e:
             return str(e), 404
 
-    def put(self, bid: int):
-        director = db.session.query(Director).get(bid)
-        req_json = request.json
-
-        director.name = req_json.get("name")
-
-        db.session.add(director)
-        db.session.commit()
-
-        return "", 204
-
-    def patch(self, bid: int):
-        director = db.session.query(Director).get(bid)
-        req_json = request.json
-
-        if "name" in req_json:
-            director.name = req_json.get("name")
-
-        db.session.add(director)
-        db.session.commit()
-
-        return "", 204
-
-    def delete(self, bid: int):
-        director = db.session.query(Director).get(bid)
-
-        db.session.delete(director)
-        db.session.commit()
-
-        return "", 204
-
 
 @genre_ns.route('/')
 class GenresView(Resource):
-    """
-    Вывод все
-    """
     def get(self):
         all_genres = db.session.query(Genre).all()
 
         return genres_schema.dump(all_genres), 200
-
-    def post(self):
-        req_json = request.json
-        new_genre = Genre(**req_json)
-
-        with db.session.begin():
-            db.session.add(new_genre)
-            db.session.commit()
-
-            return "", 201
 
 
 @genre_ns.route('/<int:bid>')
@@ -197,37 +137,6 @@ class GenresView(Resource):
             return genre_schema.dump(genre), 200
         except Exception as e:
             return str(e), 404
-
-    def put(self, bid: int):
-        genre = db.session.query(Genre).get(bid)
-        req_json = request.json
-
-        genre.name = req_json.get("name")
-
-        db.session.add(genre)
-        db.session.commit()
-
-        return "", 204
-
-    def patch(self, bid: int):
-        genre = db.session.query(Genre).get(bid)
-        req_json = request.json
-
-        if "name" in req_json:
-            genre.name = req_json.get("name")
-
-        db.session.add(genre)
-        db.session.commit()
-
-        return "", 204
-
-    def delete(self, bid: int):
-        genre = db.session.query(Genre).get(bid)
-
-        db.session.delete(genre)
-        db.session.commit()
-
-        return "", 204
 
 
 if __name__ == '__main__':
