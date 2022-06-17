@@ -70,30 +70,6 @@ class MoviesView(Resource):
 
         return "", 204
 
-    def patch(self, bid: int):
-        movie = db.session.query(Movie).get(bid)
-        req_json = request.json
-
-        if "title" in req_json:
-            movie.title = req_json.get("title")
-        if "description" in req_json:
-            movie.description = req_json.get("description")
-        if "trailer" in req_json:
-            movie.trailer = req_json.get("trailer")
-        if "year" in req_json:
-            movie.year = req_json.get("year")
-        if "rating" in req_json:
-            movie.rating = req_json.get("rating")
-        if "genre_id" in req_json:
-            movie.genre_id = req_json.get("genre_id")
-        if "director_id" in req_json:
-            movie.director_id = req_json.get("director_id")
-
-        db.session.add(movie)
-        db.session.commit()
-
-        return "", 204
-
     def delete(self, bid: int):
         movie = db.session.query(Movie).get(bid)
 
@@ -101,6 +77,18 @@ class MoviesView(Resource):
         db.session.commit()
 
         return "", 204
+
+
+# @movie_ns.route("/director_id")
+# def selected_movie():
+#     all_movies = db.session.query(Movie).all()
+#     s = request.args.get('s', '')  # получает аргумент, при отсутствии присвоит пустую подстроку
+#     try:  # проверка на ошибку открытия файла
+#         all_movies = get_posts(POST_PATH)
+#     except DataJsonError:
+#         return f"Не открывается файл"
+#     selected_post = content_for_the_posts(posts, s)
+#     return render_template('post_list.html', posts=selected_post, s=s)  # в шаблон возвращает пост и подстроку
 
 
 @director_ns.route('/')
