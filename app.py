@@ -1,7 +1,8 @@
 from flask import Flask, request
-from flask_sqlalchemy import SQLAlchemy
 from flask_restx import Api, Resource
-from models import MovieSchema, DirectorSchema, GenreSchema, Movie, Director, Genre
+from setup_db import db
+from models import Movie, Director, Genre
+from schemas import movies_schema, movie_schema, directors_schema, director_schema, genres_schema, genre_schema
 
 app = Flask(__name__)
 
@@ -9,8 +10,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///data/data.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JSON_AS_ASCII'] = False
 app.config['RESTX_JSON'] = {'ensure_ascii': False, 'indent': 3}
-db = SQLAlchemy(app)
 
+app.app_context().push()
+db.init_app(app)
 
 api = Api(app)
 movie_ns = api.namespace('movies')
@@ -18,20 +20,22 @@ director_ns = api.namespace('directors')
 genre_ns = api.namespace('genres')
 
 
-movie_schema = MovieSchema()
-movies_schema = MovieSchema(many=True)
-director_schema = DirectorSchema()
-directors_schema = DirectorSchema(many=True)
-genre_schema = GenreSchema()
-genres_schema = GenreSchema(many=True)
-
-
 @movie_ns.route('/')
 class MoviesView(Resource):
     def get(self):
-        all_movies = db.session.query(Movie).all()
+        movies_with_director_and_genre = db.session.query(Movie.id, Movie.title, Movie.description, Movie.trailer,
+                                                          Movie.year, Movie.rating, Director.name.label('director'),
+                                                          Genre.name.label('genre')).join(Director).join(Genre)
+        director_id = request.args.get('director_id')
+        genre_id = request.args.get('genre_id')
+        if director_id:
+            movies_with_director_and_genre = movies_with_director_and_genre.filter(Movie.director_id == director_id)
+        if genre_id:
+            movies_with_director_and_genre = movies_with_director_and_genre.filter(Movie.genre_id == genre_id)
 
-        return movies_schema.dump(all_movies), 200
+        select_movies = movies_with_director_and_genre.all()
+
+        return movies_schema.dump(select_movies), 200
 
     def post(self):
         req_json = request.json
@@ -41,14 +45,18 @@ class MoviesView(Resource):
             db.session.add(new_movie)
             db.session.commit()
 
-            return "", 201
+        return f"Новый фильм с id {new_movie.id} создан!", 201
 
 
 @movie_ns.route('/<int:bid>')
-class MoviesView(Resource):
+class MovieView(Resource):
     def get(self, bid: int):
         try:
-            movie = db.session.query(Movie).filter(Movie.id == bid).one()
+            movie = db.session.query(Movie.id, Movie.title, Movie.description, Movie.trailer,
+                                     Movie.year, Movie.rating, Director.name.label('director'), Genre.name.label
+                                     ('genre')).filter(Movie.id == bid).join(Director).join(Genre).filter(
+                                     Movie.id == bid).first()
+
             return movie_schema.dump(movie), 200
         except Exception as e:
             return str(e), 404
@@ -68,7 +76,31 @@ class MoviesView(Resource):
         db.session.add(movie)
         db.session.commit()
 
-        return "", 204
+        return f"Фильм с id {bid} обновлён!", 204
+
+    def patch(self, bid: int):
+        movie = db.session.query(Movie).get(bid)
+        req_json = request.json
+
+        if "title" in req_json:
+            movie.title = req_json.get("title")
+        if "description" in req_json:
+            movie.description = req_json.get("description")
+        if "trailer" in req_json:
+            movie.trailer = req_json.get("trailer")
+        if "year" in req_json:
+            movie.year = req_json.get("year")
+        if "rating" in req_json:
+            movie.rating = req_json.get("rating")
+        if "genre_id" in req_json:
+            movie.genre_id = req_json.get("genre_id")
+        if "director_id" in req_json:
+            movie.director_id = req_json.get("director_id")
+
+        db.session.add(movie)
+        db.session.commit()
+
+        return f"Фильм с id {bid} частично обновлён!", 204
 
     def delete(self, bid: int):
         movie = db.session.query(Movie).get(bid)
@@ -76,7 +108,7 @@ class MoviesView(Resource):
         db.session.delete(movie)
         db.session.commit()
 
-        return "", 204
+        return f"Фильм с id {bid} удалён!", 204
 
 
 @director_ns.route('/')
@@ -93,12 +125,13 @@ class DirectorsView(Resource):
         with db.session.begin():
             db.session.add(new_director)
             db.session.commit()
+            db.session.commit()
 
-            return "", 201
+        return f"Режиссёр с id {new_director.id} создан!", 201
 
 
 @director_ns.route('/<int:bid>')
-class DirectorsView(Resource):
+class DirectorView(Resource):
     def get(self, bid: int):
         try:
             director = db.session.query(Director).filter(Director.id == bid).one()
@@ -115,7 +148,7 @@ class DirectorsView(Resource):
         db.session.add(director)
         db.session.commit()
 
-        return "", 204
+        return f"Режиссёр с id {bid} обновлён!", 204
 
     def delete(self, bid: int):
         director = db.session.query(Director).get(bid)
@@ -123,7 +156,7 @@ class DirectorsView(Resource):
         db.session.delete(director)
         db.session.commit()
 
-        return "", 204
+        return f"Режиссёр с id {bid} удалён!", 204
 
 
 @genre_ns.route('/')
@@ -141,11 +174,11 @@ class GenresView(Resource):
             db.session.add(new_genre)
             db.session.commit()
 
-            return "", 201
+        return f"Жанр с id {new_genre.id} создан!", 201
 
 
 @genre_ns.route('/<int:bid>')
-class GenresView(Resource):
+class GenreView(Resource):
     def get(self, bid: int):
         try:
             genre = db.session.query(Genre).filter(Genre.id == bid).one()
@@ -162,7 +195,7 @@ class GenresView(Resource):
         db.session.add(genre)
         db.session.commit()
 
-        return "", 204
+        return f"Жанр с id {bid} обновлён!", 204
 
     def delete(self, bid: int):
         genre = db.session.query(Genre).get(bid)
@@ -170,7 +203,7 @@ class GenresView(Resource):
         db.session.delete(genre)
         db.session.commit()
 
-        return "", 204
+        return f"Жанр с id {bid} удалён!", 204
 
 
 if __name__ == '__main__':
